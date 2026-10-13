@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Misión Rescate en Marte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Concepto: arcade de 16 bits en Marte al anochecer. Dunas y rocas al fondo, paneles con marco crema, estrellas y cristales como puntaje, y el rover Perseverancia II como guía. A la derecha, el centro de control con el mapa 10x10 y la telemetría. Es un mundo oscuro a propósito, igual en cualquier tema. */
+:root{
+  color-scheme:dark;
+  --bg:#1E0F33; --bg2:#9A3F22; --panel:#3A1A3F; --panel2:#29112E; --bd:#F6E7B4; --shd:#10061A;
+  --ink:#F9F1E1; --ink2:#D4BFE0; --coin:#FF9A3D; --coin2:#E0650F; --coin-ink:#2B1200; --coin-bd:#7A3200;
+  --green:#57E389; --greenbg:#1B5A3A; --red:#FF6B81; --redbg:#5A1E37; --cyan:#58E0F0; --warnbg:#5B4A10;
+  --btn2:#7A3F8A; --btn2-lo:#55285F; --btn2-hi:#A260B5;
+  --code-bg:#1B0B25; --t-k:#7DD3FC; --t-s:#FFB86B; --t-c:#A58FB8; --t-n:#E0A8FF;
+  --scr-bg:#0A2C33; --scr-fg:#E4F8F5; --scr-dim:#7CB4B6; --scr-amber:#FFB347; --scr-err:#FF9A8F; --scr-ok:#7FF0B5;
+  --px:'Press Start 2P','Courier New',monospace;
+  --ui:'Pixelify Sans','Trebuchet MS',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{background:#1E0F33}
+body{margin:0}
+body{background:linear-gradient(180deg,var(--bg) 0%,#4A1B45 55%,var(--bg2) 100%) fixed var(--bg);color:var(--ink);font-family:var(--ui);font-size:17px;line-height:1.5}
+.world{position:relative;min-height:100%}
+.stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.stars i{position:absolute;left:0;top:0;width:3px;height:3px;background:#fff}
+.skyline{position:absolute;left:0;right:0;bottom:0;height:clamp(70px,14vw,170px);z-index:0;pointer-events:none}
+.skyline svg{display:block;width:100%;height:100%}
+.app{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:26px 16px 190px}
+h1,h2,h3{font-family:var(--px);font-weight:400;margin:0;line-height:1.5}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:4px solid var(--cyan);outline-offset:3px}
+.spr{display:block;image-rendering:pixelated;flex:none}
+
+/* HUD */
+.hud{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:16px;min-width:0}
+.brand h1{font-size:clamp(.95rem,3.3vw,1.55rem);color:var(--coin);text-shadow:4px 4px 0 var(--shd);overflow-wrap:anywhere}
+.brand .sub{margin:6px 0 0;font-family:var(--px);font-size:.62rem;color:var(--ink2);letter-spacing:.04em}
+.stat{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center}
+.coins{display:flex;align-items:center;gap:10px;font-family:var(--px);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.coins small{font-size:.65rem;color:var(--ink2)}
+.bar{display:flex;gap:4px;padding:4px;background:var(--shd);box-shadow:0 0 0 4px var(--bd)}
+.bar i{display:block;width:16px;height:16px;background:#4B2750}
+.bar i.on{background:var(--coin);box-shadow:inset -3px -3px 0 var(--coin2),inset 3px 3px 0 #FFD6A8}
+.intro{margin:16px 0 28px;max-width:66ch;color:var(--ink2)}
+
+/* Mapa */
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:18px 14px;margin-bottom:34px}
+.node{position:relative;display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;padding:10px 10px 9px;border:0;background:var(--panel);min-width:0;
+  box-shadow:0 -4px 0 0 #7A4A7A,0 4px 0 0 #7A4A7A,-4px 0 0 0 #7A4A7A,4px 0 0 0 #7A4A7A,0 10px 0 0 var(--shd)}
+.node .n-top{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:26px}
+.node .n-num{font-family:var(--px);font-size:.85rem;color:var(--ink2)}
+.node .n-name{font-weight:600;font-size:.98rem;line-height:1.15;overflow-wrap:normal}
+.node .n-stars{display:flex;gap:3px;min-height:14px}
+.node.done{box-shadow:0 -4px 0 0 var(--coin),0 4px 0 0 var(--coin),-4px 0 0 0 var(--coin),4px 0 0 0 var(--coin),0 10px 0 0 var(--shd)}
+.node.done .n-num{color:var(--coin)}
+.node.cur{background:#5A2C5E;box-shadow:0 -4px 0 0 var(--cyan),0 4px 0 0 var(--cyan),-4px 0 0 0 var(--cyan),4px 0 0 0 var(--cyan),0 10px 0 0 var(--shd)}
+.node.cur::before{content:'';position:absolute;left:50%;top:-20px;margin-left:-6px;border:6px solid transparent;border-top:8px solid var(--cyan);border-bottom:0;animation:bob 1s steps(2) infinite}
+.node.boss .n-num{color:var(--red)}
+.node.locked{opacity:.55;cursor:not-allowed}
+@keyframes bob{50%{transform:translateY(5px)}}
+
+/* Zona de trabajo */
+.work{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:34px 30px;align-items:start}
+.col{display:flex;flex-direction:column;gap:34px;min-width:0}
+.card{background:var(--panel);padding:20px;min-width:0;box-shadow:0 -4px 0 0 var(--bd),0 4px 0 0 var(--bd),-4px 0 0 0 var(--bd),4px 0 0 0 var(--bd),0 12px 0 0 var(--shd)}
+.mhead{display:flex;gap:18px;align-items:flex-start}
+.mhead .mtext{min-width:0;flex:1}
+#mascot .spr{width:92px;height:auto}
+.eyebrow{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-family:var(--px);font-size:.6rem;color:var(--ink2);margin-bottom:10px;letter-spacing:.03em}
+.chip{display:inline-block;padding:4px 8px;background:var(--coin);color:var(--coin-ink);font-family:var(--ui);font-weight:700;font-size:.85rem;letter-spacing:0}
+.card h2{font-size:clamp(.85rem,2.4vw,1.15rem);color:var(--coin);text-shadow:3px 3px 0 var(--shd);margin-bottom:12px;overflow-wrap:anywhere}
+.bubble{background:var(--panel2);padding:12px 14px;margin:0 0 14px;max-width:62ch;box-shadow:inset 0 0 0 3px #6B3A6B}
+.bubble .who{display:block;font-family:var(--px);font-size:.58rem;color:var(--cyan);margin-bottom:6px}
+.concept{background:var(--panel2);padding:12px 14px;color:var(--ink2);max-width:70ch;box-shadow:inset 0 0 0 3px #6B3A6B}
+.concept b{color:var(--ink)}
+.concept code,.legend code,.fb code,.done-box code{font-family:var(--mono);font-size:.84em;background:var(--code-bg);padding:1px 6px;color:var(--ink)}
+.item{display:block;font-family:var(--px);font-size:.58rem;color:var(--coin);margin-bottom:6px}
+
+.codebox{background:var(--code-bg);box-shadow:0 0 0 4px #6B3A6B}
+.codebar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;background:#3A1A38;font:500 .78rem var(--mono);color:var(--ink2)}
+pre.code{margin:0;padding:14px;overflow-x:auto;font:400 13.5px/1.9 var(--mono);color:var(--ink);tab-size:4}
+.t-k{color:var(--t-k)}.t-s{color:var(--t-s)}.t-c{color:var(--t-c);font-style:italic}.t-n{color:var(--t-n)}
+input.blank{font:600 13.5px var(--mono);color:#2A1A00;background:#FFF3B0;border:3px solid var(--coin-bd);padding:0 6px;height:1.75em;max-width:100%;vertical-align:baseline;text-align:center;border-radius:0}
+input.blank::placeholder{color:#7A6A3A;opacity:.9}
+input.blank:focus-visible{outline-offset:1px;background:#FFFFFF}
+input.blank.is-ok{background:#B8F5CF;border-color:#1D7A47;color:#0D3B20}
+input.blank.is-bad{background:#FFC3CC;border-color:#A81F3A;color:#4A0E1C}
+.legend{margin:0;padding:12px 14px 12px 36px;background:#2A1229;font-size:.98rem;color:var(--ink2);display:flex;flex-direction:column;gap:4px}
+.actions{display:flex;flex-wrap:wrap;gap:18px;margin-top:22px}
+.btn{font-family:var(--px);font-size:.66rem;line-height:1.3;letter-spacing:.02em;background:var(--coin);color:var(--coin-ink);border:0;padding:14px 16px;min-height:46px;border-radius:0;
+  box-shadow:0 -4px 0 0 var(--coin-bd),0 4px 0 0 var(--coin-bd),-4px 0 0 0 var(--coin-bd),4px 0 0 0 var(--coin-bd),inset -4px -4px 0 0 var(--coin2),inset 4px 4px 0 0 #FFD6A8}
+.btn.soft{background:var(--btn2);color:var(--ink);box-shadow:0 -4px 0 0 var(--shd),0 4px 0 0 var(--shd),-4px 0 0 0 var(--shd),4px 0 0 0 var(--shd),inset -4px -4px 0 0 var(--btn2-lo),inset 4px 4px 0 0 var(--btn2-hi)}
+.btn.mini{padding:9px 10px;min-height:36px;font-size:.55rem}
+.btn:active:not(:disabled){transform:translateY(4px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:hover:not(:disabled){filter:brightness(1.1)}
+.fb{margin-top:22px;padding:11px 14px;display:none;box-shadow:inset 0 0 0 3px rgba(255,255,255,.25)}
+.fb.show{display:block}.fb.bad{background:var(--redbg)}.fb.hint{background:var(--warnbg)}.fb.good{background:var(--greenbg)}
+
+.done-box{background:var(--greenbg);padding:20px;box-shadow:0 -4px 0 0 var(--green),0 4px 0 0 var(--green),-4px 0 0 0 var(--green),4px 0 0 0 var(--green),0 12px 0 0 var(--shd)}
+.done-box h3{font-size:clamp(.8rem,2.3vw,1.05rem);color:var(--green);text-shadow:3px 3px 0 var(--shd);margin-bottom:12px}
+.done-box .st{display:flex;gap:6px;margin-bottom:10px}
+.done-box p{margin:8px 0;max-width:64ch}
+
+/* Cajero */
+.atm{position:static}
+@media (min-width:921px) and (min-height:1000px){.atm{position:sticky;top:calc(env(safe-area-inset-top,0px) + 18px)}}
+.atm-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;margin-bottom:20px}
+.atm-head h3{font-size:.78rem;color:var(--cyan)}
+.atm-btns{display:flex;flex-wrap:wrap;gap:16px}
+.bezel{background:#8A4B35;padding:14px 14px 16px;box-shadow:inset -5px -5px 0 #5E3022,inset 5px 5px 0 #B8704F,0 0 0 4px var(--shd)}
+.crt{position:relative}
+.crt::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px)}
+.screen{background:var(--scr-bg);color:var(--scr-fg);padding:12px;height:250px;overflow:auto;font:400 12.5px/1.6 var(--mono);overflow-wrap:anywhere;box-shadow:0 0 0 4px var(--shd)}
+.screen .l{white-space:pre-wrap;min-height:1.6em}
+.l.err{color:var(--scr-err)}.l.ok{color:var(--scr-ok)}.l.note{color:var(--scr-dim);font-style:italic}.l.title{color:var(--scr-amber);font-weight:700}.l.in{color:var(--scr-amber)}
+.inrow{display:flex;gap:8px;align-items:center;margin-top:16px;background:var(--scr-bg);padding:6px 10px;box-shadow:0 0 0 4px var(--shd)}
+.inrow label{font:500 12.5px var(--mono);color:var(--scr-amber);white-space:nowrap;max-width:46%;overflow:hidden;text-overflow:ellipsis}
+.inrow input{flex:1;min-width:0;background:transparent;border:0;border-bottom:3px solid var(--scr-dim);color:var(--scr-fg);font:500 13px var(--mono);padding:5px 2px;border-radius:0}
+.inrow input:disabled{opacity:.4}
+.inrow button{background:var(--scr-amber);color:var(--coin-ink);border:0;border-radius:0;font-family:var(--px);font-size:.55rem;padding:9px 10px;min-height:32px}
+.inrow button:disabled{opacity:.4;cursor:not-allowed}
+.slot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px}
+.slot i{display:block;width:46%;height:8px;background:var(--shd);box-shadow:inset 0 2px 0 #000}
+.slot b{width:10px;height:10px;background:#7A4A3A}
+.slot.run b{background:var(--scr-ok);box-shadow:0 0 0 3px rgba(127,240,181,.35)}
+.feat{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 4px}
+.feat span{font-size:.82rem;font-weight:600;padding:3px 8px;background:#2A1229;color:var(--ink2);box-shadow:inset 0 0 0 2px #6B3A6B}
+.feat span.on{background:var(--coin);color:var(--coin-ink);box-shadow:inset -3px -3px 0 var(--coin2),inset 3px 3px 0 #FFD6A8}
+.try{margin:10px 0 0;font-size:.95rem;color:var(--ink2)}
+
+/* Final */
+.finale h2{font-size:clamp(.9rem,2.6vw,1.25rem)}
+.finale details{margin-top:18px}
+.finale summary{cursor:pointer;font-weight:600}
+.finale pre{margin:12px 0 0;padding:14px;max-height:420px;overflow:auto;background:var(--code-bg);font:400 12.5px/1.6 var(--mono);box-shadow:0 0 0 4px #6B3A6B}
+.foot{margin-top:46px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;color:var(--ink2);font-size:.92rem}
+.foot button{background:none;border:0;padding:6px 0;text-decoration:underline;color:var(--ink2)}
+
+
+/* Mapa de Marte y telemetría */
+.marsmap{position:relative;aspect-ratio:1;width:100%;max-width:360px;margin:0 auto 18px;background:#5A2A1E;box-shadow:0 0 0 4px var(--shd),0 0 0 8px #7A4A3A}
+.marsmap .grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr)}
+.cell{position:relative;background:#8A402A}
+.cell.alt{background:#964A31}
+.cell .gem{position:absolute;inset:20%;opacity:.8}
+.cell .gem .spr{width:100%;height:auto}
+.cell.got .gem{opacity:.2}
+.rover{position:absolute;width:10%;height:10%;left:0;top:90%;z-index:2;transition:left .3s steps(3),top .3s steps(3)}
+.rover .spr{width:100%;height:auto}
+.dust{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;background:repeating-linear-gradient(135deg,rgba(255,206,150,.55) 0 6px,rgba(255,176,104,.2) 6px 12px)}
+.marsmap.storm .dust{opacity:.82;animation:drift .6s steps(6) infinite}
+@keyframes drift{to{background-position:24px 0}}
+.compass{position:absolute;right:4px;top:3px;z-index:4;font:700 .62rem var(--px);color:#FFE9BF;text-shadow:2px 2px 0 var(--shd)}
+.tele{display:flex;flex-direction:column;gap:12px;margin-bottom:22px}
+.batt{display:flex;align-items:center;gap:10px}
+.batt .k{font-family:var(--px);font-size:.56rem;color:var(--ink2)}
+.batt b{font-family:var(--px);font-size:.7rem;min-width:4.2ch;text-align:right;font-variant-numeric:tabular-nums}
+.bbar{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;padding:3px;background:var(--shd);box-shadow:0 0 0 3px var(--bd)}
+.bbar i{display:block;height:14px;background:#3D2050}
+.bbar i.on{background:var(--green);box-shadow:inset -2px -2px 0 #2BA862}
+.bbar.mid i.on{background:var(--coin);box-shadow:inset -2px -2px 0 var(--coin2)}
+.bbar.low i.on{background:var(--red);box-shadow:inset -2px -2px 0 #C13A52}
+.vals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0}
+.vals div{background:var(--panel2);padding:7px 8px;box-shadow:inset 0 0 0 3px #6B3A6B;min-width:0}
+.vals dt{font-family:var(--px);font-size:.46rem;color:var(--ink2);margin:0 0 5px;overflow-wrap:anywhere}
+.vals dd{margin:0;font-family:var(--px);font-size:.72rem;color:var(--coin);font-variant-numeric:tabular-nums}
+.storm-tag{font-family:var(--px);font-size:.56rem;text-align:center;padding:8px;background:#7A5A22;color:#FFE9BF;box-shadow:inset 0 0 0 3px #FFD38A}
+
+/* Efectos */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.cfx{position:absolute;left:50%;top:38%;animation:pop 1.1s steps(11) forwards}
+@keyframes pop{0%{transform:translate(0,0);opacity:1}70%{opacity:1}100%{transform:translate(var(--dx),var(--dy));opacity:0}}
+.banner{position:fixed;left:50%;top:26%;transform:translateX(-50%);z-index:70;max-width:92vw;text-align:center;font-family:var(--px);font-size:clamp(.8rem,3.4vw,1.4rem);line-height:1.6;color:var(--coin);text-shadow:4px 4px 0 var(--shd);background:var(--panel2);padding:18px 22px;pointer-events:none;box-shadow:0 -4px 0 0 var(--coin),0 4px 0 0 var(--coin),-4px 0 0 0 var(--coin),4px 0 0 0 var(--coin),0 12px 0 0 var(--shd);animation:ban 1.8s steps(12) forwards}
+@keyframes ban{0%{transform:translateX(-50%) scale(.2)}15%{transform:translateX(-50%) scale(1.08)}25%{transform:translateX(-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+
+@media (max-width:920px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  .atm{position:static}
+}
+@media (max-width:520px){
+  .map{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .card{padding:16px}
+  .mhead{gap:12px}
+  #mascot .spr{width:60px}
+  .vals dd{font-size:.62rem}
+  .screen{height:240px}
+  .inrow label{max-width:38%}
+  .bar i{width:12px;height:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .banner{opacity:1}
+}
+</style>
+
+</head>
+<body>
+<div class="world">
+<div class="stars" id="stars" aria-hidden="true"><i></i></div>
+<div class="skyline" id="sky" aria-hidden="true"></div>
+<div id="fx" aria-hidden="true"></div>
+<div class="banner" id="banner" hidden role="status"></div>
+
+<div class="app">
+  <header class="hud">
+    <div class="brand">
+      <span id="logo" aria-hidden="true"></span>
+      <div>
+        <h1>RESCATE EN MARTE</h1>
+        <p class="sub">HACKATHON · NIVELES</p>
+      </div>
+    </div>
+    <div class="stat">
+      <div class="coins" aria-label="Estrellas obtenidas"><span id="hud-coin" aria-hidden="true"></span><b id="total">0</b><small>/27</small></div>
+      <div class="bar" id="hud-bar" role="img" aria-label="Niveles superados"></div>
+      <button class="btn soft mini" id="b-snd" type="button" aria-pressed="false">Sonido: no</button>
+    </div>
+  </header>
+  <p class="intro">Programa el cerebro del rover Perseverancia II en Java, un nivel a la vez. Completa el código, supera el nivel y mira cómo el rover gana una función nueva en el mapa.</p>
+
+  <nav class="map" id="map" aria-label="Niveles"></nav>
+
+  <main class="work">
+    <div class="col" id="left">
+      <section class="card" id="mission">
+        <div class="mhead">
+          <div id="mascot" aria-hidden="true"></div>
+          <div class="mtext">
+            <div class="eyebrow"><span id="m-level"></span><span class="chip" id="m-tema"></span></div>
+            <h2 id="m-title"></h2>
+          </div>
+        </div>
+        <div class="bubble"><b class="who">ROVER DICE</b><span id="m-story"></span></div>
+        <div class="concept" id="m-concept"></div>
+      </section>
+
+      <section class="card" id="work">
+        <div class="codebox">
+          <div class="codebar"><span>MisionMarte.java</span><span id="c-count"></span></div>
+          <pre class="code" id="code"></pre>
+          <ol class="legend" id="legend"></ol>
+        </div>
+        <div class="actions">
+          <button class="btn" id="b-check">Verificar</button>
+          <button class="btn soft" id="b-hint">Pedir pista</button>
+          <button class="btn soft" id="b-sol" hidden>Ver solución</button>
+        </div>
+        <div class="fb" id="fb" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="done-box" id="done" hidden>
+        <h3>¡NIVEL SUPERADO!</h3>
+        <div class="st" id="d-stars" aria-label="Estrellas del nivel"></div>
+        <p id="d-explain"></p>
+        <p id="d-unlock"></p>
+        <div class="actions"><button class="btn" id="b-next">Siguiente nivel</button></div>
+      </section>
+
+      <section class="card finale" id="finale" hidden>
+        <h2>¡MISIÓN CUMPLIDA!</h2>
+        <p id="f-rank"></p>
+        <p>Este es el programa completo del rover que armaste nivel a nivel. Cópialo en tu editor, compílalo y pruébalo en consola.</p>
+        <div class="actions"><button class="btn" id="b-copy">Copiar código</button></div>
+        <details><summary>Ver MisionMarte.java completo</summary><pre id="f-code"></pre></details>
+      </section>
+    </div>
+
+    <aside class="col atm">
+      <section class="card">
+        <div class="atm-head">
+          <h3>CENTRO DE CONTROL</h3>
+          <div class="atm-btns">
+            <button class="btn" id="b-run">Ejecutar</button>
+            <button class="btn soft" id="b-demo">Ver demo</button>
+          </div>
+        </div>
+        <div class="marsmap" id="marsmap" role="img" aria-label="Mapa de Marte de 10 por 10 con la posición del rover">
+          <div class="grid" id="mgrid"></div>
+          <div class="rover" id="rover"></div>
+          <div class="dust" id="dust"></div>
+          <span class="compass" aria-hidden="true">N ▲</span>
+        </div>
+        <div class="tele" id="tele">
+          <div class="batt"><span class="k">BATERÍA</span><div class="bbar" id="bbar"></div><b id="bpct">100%</b></div>
+          <dl class="vals">
+            <div><dt>POS</dt><dd id="t-pos">0,0</dd></div>
+            <div><dt>MUESTRAS</dt><dd id="t-mue">0</dd></div>
+            <div><dt>MOVS</dt><dd id="t-mov">0</dd></div>
+            <div><dt>RECARGAS</dt><dd id="t-rec">0/3</dd></div>
+          </dl>
+          <div class="storm-tag" id="t-storm" hidden>TORMENTA DE ARENA</div>
+        </div>
+        <div class="bezel">
+          <div class="crt"><div class="screen" id="screen" role="log" aria-live="polite" aria-label="Salida del rover"></div></div>
+          <form class="inrow" id="inform" autocomplete="off">
+            <label for="sim-in" id="sim-label">Entrada</label>
+            <input id="sim-in" inputmode="numeric" autocomplete="off" spellcheck="false" disabled>
+            <button type="submit" id="sim-send" disabled>ENVIAR</button>
+          </form>
+          <div class="slot" id="slot"><i></i><b></b></div>
+        </div>
+        <div class="feat" id="feat" aria-label="Funciones del rover"></div>
+        <p class="try" id="try"></p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>Tu avance se guarda en este navegador.</span>
+    <button id="b-teacher" type="button">Modo docente: abrir todos los niveles</button>
+    <button id="b-reset" type="button">Reiniciar progreso</button>
+  </footer>
+</div>
+</div>
+
+<script type="text/plain" id="fullcode">import java.util.Scanner;
+
+/**
+ * Hackathon: Misión Rescate en Marte (solución de referencia)
+ * Temas: if simple/anidado, else if, switch, while, do-while,
+ * for ascendente/descendente, conteo, sumatoria, bandera, comentarios.
+ */
+public class MisionMarte {
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        // ---- Estado del rover ----
+        int x = 0, y = 0;                 // posición en la cuadrícula 10x10
+        int bateria = 100;                // porcentaje de batería
+        int movimientos = 0;              // CONTEO de movimientos exitosos
+        int muestras = 0;                 // CONTEO de muestras recolectadas
+        int recargas = 0;                 // CONTEO de recargas
+        int energiaConsumida = 0;         // SUMATORIA de energía gastada
+        boolean tormenta = false;         // BANDERA: tormenta de arena activa
+        int ultX = -1, ultY = -1;         // última celda donde se recolectó
+        int opcion;
+
+        System.out.println("=== MISIÓN RESCATE EN MARTE ===");
+
+        // ---- Acceso: while con BANDERA y máximo 3 intentos (clave: 2024) ----
+        boolean acceso = false;
+        int intentos = 0;
+        while (!acceso && intentos < 3) {
+            System.out.print("Clave de lanzamiento: ");
+            int clave = sc.nextInt();
+            intentos++;
+            if (clave == 2024) {
+                acceso = true;
+            } else {
+                System.out.println("Clave incorrecta (" + intentos + "/3).");
+            }
+        }
+        if (!acceso) {
+            System.out.println("Sistema bloqueado. Misión abortada.");
+            sc.close();
+            return;
+        }
+
+        // ---- Ciclo principal: do-while (el menú se muestra al menos una vez) ----
+        do {
+            System.out.println("\n1.Norte 2.Sur 3.Este 4.Oeste 5.Recolectar 6.Recargar 7.Estado 0.Terminar");
+            System.out.print("Comando: ");
+            opcion = sc.nextInt();
+
+            switch (opcion) {
+                case 1: case 2: case 3: case 4:
+                    // Decisión anidada: primero batería, luego límites
+                    if (bateria < 20) {
+                        System.out.println("Batería crítica: solo puedes recargar.");
+                    } else {
+                        int nx = x, ny = y;
+                        if (opcion == 1) ny++;
+                        else if (opcion == 2) ny--;
+                        else if (opcion == 3) nx++;
+                        else nx--;
+
+                        if (nx < 0 || nx > 9 || ny < 0 || ny > 9) {
+                            System.out.println("Fuera de la cuadrícula: movimiento cancelado.");
+                        } else {
+                            x = nx;
+                            y = ny;
+                            bateria -= 5;
+                            energiaConsumida += 5;
+                            movimientos++;
+                            tormenta = false;               // el movimiento libera la tormenta anterior
+                            if (movimientos % 5 == 0) {
+                                tormenta = true;            // cada 5 movimientos se activa
+                                System.out.println("¡Tormenta de arena! No podrás recolectar en este turno.");
+                            }
+                            System.out.println("Rover en (" + x + "," + y + ")");
+                        }
+                    }
+                    break;
+
+                case 5:
+                    if (bateria < 20) {
+                        System.out.println("Batería crítica: solo puedes recargar.");
+                    } else if (tormenta) {
+                        System.out.println("Tormenta activa: recolección bloqueada.");
+                    } else if ((x + y) % 3 != 0) {
+                        System.out.println("No hay muestras en esta celda.");
+                    } else if (x == ultX && y == ultY) {
+                        System.out.println("La muestra de esta celda ya fue recolectada.");
+                    } else {
+                        muestras++;
+                        bateria -= 3;
+                        energiaConsumida += 3;
+                        ultX = x;
+                        ultY = y;
+                        System.out.println("¡Muestra recolectada! Total: " + muestras);
+                    }
+                    break;
+
+                case 6:
+                    if (recargas >= 3) {
+                        System.out.println("Ya usaste las 3 recargas permitidas.");
+                    } else if (bateria == 100) {
+                        System.out.println("La batería ya está llena.");
+                    } else {
+                        bateria += 30;
+                        if (bateria > 100) bateria = 100;
+                        recargas++;
+                        System.out.println("Recarga " + recargas + "/3. Batería: " + bateria + "%");
+                    }
+                    break;
+
+                case 7:
+                    System.out.println("Posición (" + x + "," + y + ") | Batería " + bateria
+                            + "% | Muestras " + muestras + " | Movimientos " + movimientos
+                            + " | Recargas " + recargas);
+                    break;
+
+                case 0:
+                    System.out.println("Finalizando misión...");
+                    break;
+
+                default:
+                    System.out.println("Opción inválida.");
+            }
+        } while (opcion != 0);
+
+        // ---- Cuenta regresiva: for descendente ----
+        for (int i = 10; i >= 1; i--) {
+            System.out.print(i + " ");
+        }
+        System.out.println("¡Despegue!");
+
+        // ---- Barra de progreso: for ascendente (un * por muestra) ----
+        System.out.print("Progreso: [");
+        for (int i = 1; i <= muestras; i++) {
+            System.out.print("*");
+        }
+        System.out.println("]");
+
+        // ---- Puntaje y rango ----
+        int puntaje = muestras * 100 - movimientos * 2;
+        String rango;
+        if (puntaje >= 400) {
+            rango = "Comandante";
+        } else if (puntaje >= 200) {
+            rango = "Explorador";
+        } else {
+            rango = "Cadete";
+        }
+
+        System.out.println("\n=== INFORME FINAL ===");
+        System.out.println("Movimientos: " + movimientos);
+        System.out.println("Muestras: " + muestras);
+        System.out.println("Recargas: " + recargas);
+        System.out.println("Energía consumida: " + energiaConsumida + "%");
+        System.out.println("Puntaje: " + puntaje);
+        System.out.println("Rango: " + rango);
+        sc.close();
+    }
+}
+</script>
+
+<script>
+//#LOGIC-START
+/* ---------- Utilidades de comparación ---------- */
+function canon(s){
+  s=String(s).replace(/\s+/g,'');
+  s=s.replace(/(\w+)==false/g,'!$1').replace(/(\w+)!=true/g,'!$1').replace(/(\w+)==true/g,'$1').replace(/(\w+)!=false/g,'$1');
+  s=s.replace(/\((!?\w+)\)/g,'$1');
+  if(s.includes('&&')&&!s.includes('||')) s=s.split('&&').sort().join('&&');
+  else if(s.includes('||')&&!s.includes('&&')) s=s.split('||').sort().join('||');
+  return s;
+}
+function isOk(blank,val){ const v=canon(val); return v!=='' && blank.ok.some(a=>canon(a)===v); }
+
+/* ---------- Niveles ---------- */
+const LEVELS=[
+{
+  short:'Acceso', tema:'while + bandera', title:'Clave de lanzamiento',
+  story:'El rover Perseverancia II quedó aislado en Marte. Solo el equipo autorizado puede darle órdenes: hay que escribir la clave de lanzamiento, con 3 oportunidades. Si fallas las 3, el sistema se bloquea.',
+  concept:'<b>while</b> revisa la condición antes de cada vuelta. Una <b>bandera</b> es un <code>boolean</code> que cambia cuando algo ocurre: aquí <code>acceso</code> avisa que la clave fue correcta.',
+  code:`int clave = 2024;
+boolean acceso = false;
+int intentos = 0;
+
+while ([[1]]) {
+    System.out.print("Clave de lanzamiento: ");
+    int digitada = sc.nextInt();
+    intentos++;
+    if (digitada == clave) {
+        acceso = [[2]];
+    } else {
+        System.out.println("Clave incorrecta (" + intentos + "/3).");
+    }
+}
+
+if ([[3]]) {
+    System.out.println("Sistema bloqueado. Misión abortada.");
+    return;
+}`,
+  blanks:[
+    {ask:'Condición para seguir pidiendo la clave: todavía no hay acceso <b>y</b> quedan intentos (menos de 3).', ok:['!acceso && intentos < 3','!acceso && intentos <= 2','!acceso && 3 > intentos']},
+    {ask:'Valor que avisa que la clave fue correcta.', ok:['true']},
+    {ask:'Condición para abortar la misión: no se logró el acceso.', ok:['!acceso']}
+  ],
+  hint:'Usa <code>&&</code> para unir dos condiciones. "No hay acceso" se escribe con <code>!</code> delante de la bandera.',
+  explain:'El ciclo termina por una de dos razones: la clave fue correcta (la bandera pasa a <code>true</code>) o se acabaron los intentos. Después del ciclo, la bandera te dice cuál de las dos pasó.',
+  unlock:'El centro de control ahora pide la clave de lanzamiento (2024) y se bloquea tras 3 errores.',
+  tryIt:'Escribe 3 claves incorrectas, y luego ejecuta otra vez con 2024.',
+  demo:['0000','2024']
+},
+{
+  short:'Menú', tema:'do-while + switch', title:'Panel de comandos',
+  story:'Con el acceso listo, el piloto necesita un panel que se repita después de cada orden, hasta que decida terminar la misión.',
+  concept:'<b>do-while</b> ejecuta el bloque al menos una vez y revisa la condición al final. <b>switch</b> elige un caso según el valor de una variable; cada <code>case</code> termina con <code>break</code>.',
+  code:`int opcion;
+do {
+    System.out.println("1.Norte 2.Sur 3.Este 4.Oeste 0.Terminar");
+    opcion = sc.nextInt();
+
+    [[1]] (opcion) {
+        case 1: case 2: case 3: case 4:
+            System.out.println("Moviendo el rover...");
+            [[2]];
+        case 0:
+            System.out.println("Finalizando misión...");
+            break;
+        [[3]]:
+            System.out.println("Opción inválida.");
+    }
+} while ([[4]]);`,
+  blanks:[
+    {ask:'Palabra que elige un caso según el valor de <code>opcion</code>.', ok:['switch']},
+    {ask:'Sentencia que evita que se ejecute el siguiente <code>case</code>.', ok:['break']},
+    {ask:'Etiqueta del caso que atiende cualquier otro valor.', ok:['default']},
+    {ask:'Condición para repetir el panel: mientras no se haya elegido terminar (0).', ok:['opcion != 0','!(opcion == 0)','0 != opcion']}
+  ],
+  hint:'El caso que atiende todo lo demás se llama como la palabra inglesa para «por defecto». Para repetir, compara <code>opcion</code> con 0 usando <code>!=</code>.',
+  explain:'El panel se muestra siempre una primera vez, por eso va en un <code>do-while</code>. Varios <code>case</code> seguidos comparten el mismo bloque, como aquí los cuatro movimientos.',
+  unlock:'El centro de control ya tiene panel de comandos. Los comandos aparecen bloqueados hasta que superes sus niveles.',
+  tryIt:'Escribe un comando inválido como 9 y luego termina con 0.',
+  demo:['2024','1','9','0']
+},
+{
+  short:'Movimiento', tema:'if anidado', title:'Mover el rover',
+  story:'Mover el rover cuesta 5% de batería. Con menos de 20% solo puede recargar, y la cuadrícula de Marte mide 10x10: salirse del mapa cancela el movimiento.',
+  concept:'<b>if anidado</b>: un <code>if</code> dentro de otro. Primero se revisa lo más urgente (la batería) y solo si pasa se revisan los límites del mapa. <code>||</code> significa "o": basta que una condición sea verdadera.',
+  code:`int nx = x, ny = y;
+if (opcion == 1) ny++;
+else if (opcion == 2) ny--;
+else if (opcion == 3) nx++;
+else nx--;
+
+if (bateria [[1]] 20) {
+    System.out.println("Batería crítica: solo puedes recargar.");
+} else {
+    if (nx < 0 [[2]] nx > 9 || ny < 0 || ny [[3]] 9) {
+        System.out.println("Fuera de la cuadrícula: movimiento cancelado.");
+    } else {
+        x = nx;
+        y = ny;
+        bateria [[4]] 5;
+    }
+}`,
+  blanks:[
+    {ask:'Operador: la batería es menor que 20.', ok:['<']},
+    {ask:'Operador lógico O: fuera del mapa por la izquierda <b>o</b> por la derecha.', ok:['||']},
+    {ask:'Operador: <code>ny</code> es mayor que 9 (se pasó por arriba).', ok:['>']},
+    {ask:'Operador que resta 5 a la batería y guarda el resultado.', ok:['-=']}
+  ],
+  hint:'"Menor que" usa un solo símbolo. O lógico son dos barras verticales. Para restar y guardar a la vez hay un operador compuesto de resta.',
+  explain:'El <code>if</code> de los límites vive dentro del <code>else</code> de la batería: solo se evalúa si hay energía. Calcular primero <code>nx</code> y <code>ny</code> permite probar el movimiento antes de aplicarlo.',
+  unlock:'Los comandos 1 a 4 ya mueven el rover por el mapa, gastan batería y respetan los bordes.',
+  tryIt:'Desde (0,0) intenta ir al Oeste y al Sur: el mapa no lo permite. Luego ve al Este.',
+  demo:['2024','4','2','3','3','1','0']
+},
+{
+  short:'Tormenta', tema:'bandera + residuo', title:'Tormenta de arena',
+  story:'Cada 5 movimientos exitosos se levanta una tormenta que impide recolectar muestras. Se calma en cuanto el rover vuelve a moverse.',
+  concept:'Una <b>bandera</b> guarda un estado: tormenta sí o no. El operador <code>%</code> da el residuo de una división, así que <code>movimientos % 5 == 0</code> es verdadero cada 5 movimientos.',
+  code:`boolean tormenta = false;
+int movimientos = 0;
+
+// ... tras un movimiento exitoso:
+movimientos++;
+tormenta = [[1]];
+if (movimientos [[2]] 5 == 0) {
+    tormenta = [[3]];
+    System.out.println("¡Tormenta de arena! No podrás recolectar en este turno.");
+}`,
+  blanks:[
+    {ask:'Valor que apaga la tormenta anterior cada vez que el rover se mueve.', ok:['false']},
+    {ask:'Operador de residuo: da 0 cuando el número es múltiplo de 5.', ok:['%']},
+    {ask:'Valor que enciende la tormenta.', ok:['true']}
+  ],
+  hint:'Primero se apaga la bandera y después, solo si toca, se vuelve a encender. El residuo se escribe con el mismo símbolo que un porcentaje.',
+  explain:'Apagar la bandera en cada movimiento y encenderla solo en múltiplos de 5 garantiza que la tormenta dure exactamente un turno. Es un patrón muy usado para eventos periódicos.',
+  unlock:'Cada 5 movimientos exitosos se activa la tormenta de arena. El mapa se cubre de arena mientras dura.',
+  tryIt:'Haz 5 movimientos seguidos y mira cómo aparece la tormenta en el quinto.',
+  demo:['2024','3','3','3','3','3','3','0']
+},
+{
+  short:'Recolección', tema:'decisión en cadena', title:'Recolectar muestras',
+  story:'Las muestras solo se pueden tomar si la batería lo permite, no hay tormenta, la celda tiene una muestra y no es la misma de la última vez. Cada rechazo debe explicar su motivo.',
+  concept:'<b>if / else if / else</b> evalúa de arriba hacia abajo y ejecuta solo el primer bloque verdadero. Una celda tiene muestra cuando <code>(x + y) % 3 == 0</code>. <code>&amp;&amp;</code> significa "y": deben cumplirse las dos condiciones.',
+  code:`if (bateria < 20) {
+    System.out.println("Batería crítica: solo puedes recargar.");
+} else if ([[1]]) {
+    System.out.println("Tormenta activa: recolección bloqueada.");
+} else if ((x + y) [[2]] 3 != 0) {
+    System.out.println("No hay muestras en esta celda.");
+} else if (x == ultX [[3]] y == ultY) {
+    System.out.println("La muestra de esta celda ya fue recolectada.");
+} else {
+    muestras++;
+    bateria [[4]] 3;
+    ultX = x;
+    ultY = y;
+}`,
+  blanks:[
+    {ask:'Condición para bloquear: la bandera de tormenta está activa.', ok:['tormenta']},
+    {ask:'Operador de residuo: si <code>(x + y)</code> no es múltiplo de 3, no hay muestra.', ok:['%']},
+    {ask:'Operador lógico Y: misma columna <b>y</b> misma fila que la última recolección.', ok:['&&']},
+    {ask:'Operador que resta 3 a la batería y guarda el resultado.', ok:['-=']}
+  ],
+  hint:'Una bandera <code>boolean</code> ya es una condición: no necesita comparación. Y lógico son dos símbolos &amp;.',
+  explain:'El orden de las validaciones importa: lo más urgente primero (batería), luego el estado global (tormenta), y al final lo particular de la celda. Así cada mensaje es el que corresponde.',
+  unlock:'El comando 5 ya recolecta muestras en las celdas donde (x + y) es múltiplo de 3.',
+  tryIt:'En (0,0) hay muestra: recolecta, intenta de nuevo y verás que no se repite.',
+  demo:['2024','5','5','3','5','3','3','5','0']
+},
+{
+  short:'Recarga', tema:'else if + límites', title:'Recargar la batería',
+  story:'Los paneles solares dan 30% de batería por recarga, pero solo se permiten 3 por misión y no tiene sentido recargar si ya está llena.',
+  concept:'Dos validaciones encadenadas con <code>else if</code> protegen la recarga. Después de sumar, un <code>if</code> simple evita que la batería pase del 100%.',
+  code:`if (recargas [[1]] 3) {
+    System.out.println("Ya usaste las 3 recargas permitidas.");
+} else if (bateria == [[2]]) {
+    System.out.println("La batería ya está llena.");
+} else {
+    bateria += 30;
+    if (bateria > 100) bateria = [[3]];
+    recargas[[4]];
+}`,
+  blanks:[
+    {ask:'Operador: ya se hicieron 3 recargas o más.', ok:['>=','==']},
+    {ask:'Valor de una batería llena.', ok:['100']},
+    {ask:'Valor al que se limita la batería si se pasa.', ok:['100']},
+    {ask:'Operador que aumenta el contador de recargas en 1.', ok:['++','+= 1','= recargas + 1']}
+  ],
+  hint:'"Mayor o igual" son dos símbolos pegados. La batería llena es 100 y no puede superar ese valor.',
+  explain:'Limitar el valor después de sumar (<code>if (bateria &gt; 100)</code>) es más seguro que confiar en que nunca se pase. Es una validación de rango muy común.',
+  unlock:'El comando 6 ya recarga 30% de batería, hasta 3 veces.',
+  tryIt:'Gasta batería moviéndote y recarga. Luego intenta recargar con la batería llena.',
+  demo:['2024','3','3','3','6','6','0']
+},
+{
+  short:'Contadores', tema:'conteo y sumatoria', title:'Datos de la misión',
+  story:'El control de misión quiere saber cuántas muestras recolectó el rover y cuánta energía gastó en total.',
+  concept:'Un <b>contador</b> sube de uno en uno (<code>++</code>). Un <b>acumulador</b> suma valores distintos (<code>+=</code>). Ambos arrancan en 0. Los comentarios <code>//</code> explican cada línea.',
+  code:`int muestras = [[1]];            // conteo de muestras
+int energiaConsumida = 0;        // sumatoria de energía
+
+// ... al mover el rover:
+energiaConsumida [[2]] 5;
+
+// ... al recolectar una muestra:
+muestras[[3]];
+energiaConsumida += 3;
+
+// ... en el informe:
+System.out.println("Energía consumida: " + [[4]] + "%");`,
+  blanks:[
+    {ask:'Valor inicial de un contador.', ok:['0']},
+    {ask:'Operador que suma 5 al acumulador de energía.', ok:['+=']},
+    {ask:'Operador que aumenta el contador en una unidad.', ok:['++','+= 1','= muestras + 1']},
+    {ask:'Variable que se muestra en el informe.', ok:['energiaConsumida']}
+  ],
+  hint:'Un contador y un acumulador parten de cero. Para subir en uno hay un operador de dos signos más. La variable del informe es la que lleva el total de energía.',
+  explain:'<code>muestras++</code> responde "cuántas" y <code>energiaConsumida += 5</code> responde "cuánta". Son las dos preguntas más comunes al procesar datos.',
+  unlock:'El comando 7 ya muestra el estado completo y el informe final trae movimientos, muestras, recargas y energía.',
+  tryIt:'Haz algunos movimientos, recolecta y pide el comando 7.',
+  demo:['2024','3','3','3','5','7','0']
+},
+{
+  short:'Despegue', tema:'for descendente y ascendente', title:'Cuenta regresiva',
+  story:'Cuando termina la misión, la nave de rescate despega con una cuenta regresiva. Antes, el panel muestra una barra de progreso con un asterisco por cada muestra recolectada.',
+  concept:'<b>for</b> reúne inicio, condición y paso. Si el paso suma (<code>i++</code>) la iteración es <b>ascendente</b>; si resta (<code>i--</code>) es <b>descendente</b>.',
+  code:`for (int i = [[1]]; i >= 1; [[2]]) {
+    System.out.print(i + " ");
+}
+System.out.println("¡Despegue!");
+
+System.out.print("Progreso: [");
+for (int i = 1; i [[3]] muestras; [[4]]) {
+    System.out.print("*");
+}
+System.out.println("]");`,
+  blanks:[
+    {ask:'Valor con el que empieza la cuenta regresiva.', ok:['10']},
+    {ask:'Paso que resta una unidad a <code>i</code> en cada vuelta.', ok:['i--','--i','i -= 1','i = i - 1']},
+    {ask:'Operador: la barra sigue mientras <code>i</code> sea menor o igual a las muestras.', ok:['<=']},
+    {ask:'Paso que suma una unidad a <code>i</code> en cada vuelta.', ok:['i++','++i','i += 1','i = i + 1']}
+  ],
+  hint:'La cuenta regresiva baja de 10 a 1, así que el paso resta. La barra sube de 1 hasta el número de muestras, así que el paso suma y la condición usa menor o igual.',
+  explain:'En el primer <code>for</code> el contador baja de 10 a 1; en el segundo sube de 1 hasta <code>muestras</code>. Cambiar el sentido solo requiere cambiar inicio, condición y paso.',
+  unlock:'Al terminar la misión aparece la cuenta regresiva de despegue y la barra de progreso con las muestras.',
+  tryIt:'Recolecta algunas muestras y termina con 0 para ver la cuenta regresiva.',
+  demo:['2024','5','3','3','3','5','0']
+},
+{
+  short:'Jefe final', tema:'else if + comentarios', title:'Rango del piloto',
+  story:'Último nivel. El control de misión calcula tu puntaje: 100 puntos por muestra menos 2 por cada movimiento. Según el puntaje serás Cadete, Explorador o Comandante.',
+  concept:'Un <b>else if</b> encadena rangos de mayor a menor. Los comentarios de línea empiezan con <code>//</code> y los de bloque se escriben entre <code>/*</code> y <code>*/</code>.',
+  code:`[[1]] Calcula el puntaje de la misión
+int puntaje = muestras * [[2]] - movimientos * 2;
+String rango;
+if (puntaje >= 400) {
+    rango = "Comandante";
+} [[3]] (puntaje >= 200) {
+    rango = "Explorador";
+} else {
+    rango = "Cadete";
+}
+
+/[[4]]
+   Misión Rescate en Marte
+   Equipo: escribe aquí tus nombres
+[[5]]/
+System.out.println("Rango: " + rango);`,
+  blanks:[
+    {ask:'Símbolos que inician un comentario de una sola línea.', ok:['//']},
+    {ask:'Puntos que vale cada muestra.', ok:['100']},
+    {ask:'Palabras que encadenan la segunda condición.', ok:['else if']},
+    {ask:'Símbolo que, junto a la barra, abre un comentario de bloque.', ok:['*']},
+    {ask:'Símbolo que, junto a la barra, cierra un comentario de bloque.', ok:['*']}
+  ],
+  hint:'Cada muestra vale lo mismo que dice el enunciado del nivel. El comentario de bloque abre con barra y asterisco, y cierra con asterisco y barra.',
+  explain:'Ordenar de mayor a menor hace que cada <code>else if</code> solo reciba lo que no atrapó la condición anterior. Los comentarios no cambian el comportamiento, pero hacen que otra persona entienda tu código.',
+  unlock:'El informe final incluye el puntaje y tu rango de piloto.',
+  tryIt:'Recolecta 3 muestras en pocos movimientos y termina: serás Explorador.',
+  demo:['2024','5','3','3','3','5','3','3','3','5','0']
+}
+];
+
+/* ---------- Simulador (refleja el Java de referencia) ---------- */
+class InputErr extends Error{constructor(t){super(t);this.text=t;}}
+function num(s){ const t=String(s).trim(); if(!/^-?\d+$/.test(t)) throw new InputErr(t); return parseInt(t,10); }
+const ask=(p)=>({ask:p});
+const LOCK_LEVEL={1:2,2:2,3:2,4:2,5:4,6:5};
+function* atm(F,out,emit){
+  let x=0,y=0,bat=100,mov=0,mue=0,rec=0,ener=0,torm=false,ultX=-1,ultY=-1;
+  const sync=()=>{ if(emit) emit({x,y,bat,mov,mue,rec,torm,ultX,ultY}); };
+  const lock=n=>out('[Bloqueado] Este comando se activa al superar el nivel '+LOCK_LEVEL[n]+'.','note');
+  sync();
+  out('=== MISIÓN RESCATE EN MARTE ===','title');
+  if(F.login){
+    let acceso=false, intentos=0;
+    while(!acceso && intentos<3){
+      const d=num(yield ask('Clave de lanzamiento: '));
+      intentos++;
+      if(d===2024) acceso=true; else out('Clave incorrecta ('+intentos+'/3).','err');
+    }
+    if(!acceso){ out('Sistema bloqueado. Misión abortada.','err'); return; }
+  } else out('Nivel 0 pendiente: el rover todavía no pide clave.','note');
+  if(!F.menu){ out('Rover en ('+x+','+y+')'); out('Nivel 1 pendiente: todavía no hay panel de comandos.','note'); return; }
+  let op;
+  do{
+    sync();
+    out('');
+    out('1.Norte 2.Sur 3.Este 4.Oeste 5.Recolectar 6.Recargar 7.Estado 0.Terminar');
+    op=num(yield ask('Comando: '));
+    switch(op){
+      case 1: case 2: case 3: case 4: {
+        if(!F.move){ lock(1); break; }
+        if(bat<20) out('Batería crítica: solo puedes recargar.','err');
+        else {
+          let nx=x, ny=y;
+          if(op===1) ny++; else if(op===2) ny--; else if(op===3) nx++; else nx--;
+          if(nx<0||nx>9||ny<0||ny>9) out('Fuera de la cuadrícula: movimiento cancelado.','err');
+          else {
+            x=nx; y=ny; bat-=5; ener+=5; mov++; torm=false;
+            if(F.storm && mov%5===0){ torm=true; out('¡Tormenta de arena! No podrás recolectar en este turno.','err'); }
+            out('Rover en ('+x+','+y+')');
+          }
+        }
+        break; }
+      case 5: {
+        if(!F.collect){ lock(5); break; }
+        if(bat<20) out('Batería crítica: solo puedes recargar.','err');
+        else if(torm) out('Tormenta activa: recolección bloqueada.','err');
+        else if((x+y)%3!==0) out('No hay muestras en esta celda.','err');
+        else if(x===ultX && y===ultY) out('La muestra de esta celda ya fue recolectada.','err');
+        else { mue++; bat-=3; ener+=3; ultX=x; ultY=y; out('¡Muestra recolectada! Total: '+mue,'ok'); }
+        break; }
+      case 6: {
+        if(!F.recharge){ lock(6); break; }
+        if(rec>=3) out('Ya usaste las 3 recargas permitidas.','err');
+        else if(bat===100) out('La batería ya está llena.','err');
+        else { bat+=30; if(bat>100) bat=100; rec++; out('Recarga '+rec+'/3. Batería: '+bat+'%','ok'); }
+        break; }
+      case 7:
+        if(F.count) out('Posición ('+x+','+y+') | Batería '+bat+'% | Muestras '+mue+' | Movimientos '+mov+' | Recargas '+rec);
+        else { out('Posición ('+x+','+y+') | Batería '+bat+'%'); out('Nivel 6 pendiente: aún no se cuentan muestras ni movimientos.','note'); }
+        break;
+      case 0: out('Finalizando misión...'); break;
+      default: out('Opción inválida.','err');
+    }
+  }while(op!==0);
+  sync();
+  if(F.for_){
+    out('10 9 8 7 6 5 4 3 2 1 ¡Despegue!','title');
+    out('Progreso: ['+'*'.repeat(mue)+']');
+  }
+  if(F.count){
+    out(''); out('=== INFORME FINAL ===','title');
+    out('Movimientos: '+mov); out('Muestras: '+mue); out('Recargas: '+rec); out('Energía consumida: '+ener+'%');
+    if(F.cat){
+      const p=mue*100-mov*2;
+      out('Puntaje: '+p); out('Rango: '+(p>=400?'Comandante':(p>=200?'Explorador':'Cadete')),'ok');
+    }
+  } else out('Misión terminada.','note');
+}
+const FEATS=[['login','Clave'],['menu','Panel'],['move','Mover'],['storm','Tormenta'],['collect','Muestras'],['recharge','Recarga'],['count','Datos'],['for_','Despegue'],['cat','Rango']];
+//#LOGIC-END
+
+
+/* ---------- Arte pixel ---------- */
+function sprite(rows,pal,px,cls){
+  const h=rows.length, w=rows[0].length; let r='';
+  rows.forEach((row,y)=>{ let x=0; while(x<w){ const c=row[x]; if(c==='.'){x++;continue;} let e=x; while(e<w&&row[e]===c) e++; r+='<rect x="'+x+'" y="'+y+'" width="'+(e-x)+'" height="1" fill="'+pal[c]+'"/>'; x=e; } });
+  return '<svg class="spr '+(cls||'')+'" viewBox="0 0 '+w+' '+h+'" width="'+(w*px)+'" height="'+h*px+'" shape-rendering="crispEdges" aria-hidden="true">'+r+'</svg>';
+}
+const G={
+  rover:['.......OL.......','.......O........','....OOOOOOOO....','....OWEWWEWO....','....OWWWWWWO....','....OOOOOOOO....','.......OO.......','.OOOOOOOOOOOOOO.','.OPpPpPpWWssssO.','.OpPpPpPWWssssO.','.OPpPpPpWWssssO.','.OOOOOOOOOOOOOO.','.OKHKO....OKHKO.','.OKKKO....OKKKO.','..OOO......OOO..'],
+  crystal:['....O....','...OCO...','..OCLCO..','.OCLCCCO.','OCLCCCCCO','OCCCCCCDO','.OCCCCDO.','..OCCDO..','...ODO...','....O....'],
+  star:['....O....','...OYO...','...OYO...','OOOOYOOOO','OYYYYYYYO','.OYYYYYO.','..OYYYO..','..OYOYO..','..OO.OO..'],
+  lock:['...OOOO...','..OGGGGO..','..OG..GO..','..OG..GO..','.OOOOOOOO.','.OYYYYYYO.','.OYYOOYYO.','.OYYOOYYO.','.OYYYOYYO.','.OYYYYYYO.','.OOOOOOOO.'],
+  moon:['..OOOOO..','.OGGGGGO.','OGGDGGGGO','OGGGGGDGO','OGDGGGGGO','OGGGGDGGO','OGGGGGGGO','.OGGGGGO.','..OOOOO..']
+};
+const MOODS={neutral:{L:'#FFD23F',E:'#0A0A26'},happy:{L:'#57E389',E:'#58E0F0'},worried:{L:'#FF4D5E',E:'#FF4D5E'}};
+const PAL={
+  crystal:{O:'#063A4A',C:'#58E0F0',L:'#D6FAFF',D:'#2B9DB5'},
+  star:{O:'#7A3200',Y:'#FFC94A'}, starOff:{O:'#6B3A6B',Y:'#46204D'},
+  lock:{O:'#10061A',G:'#D4BFE0',Y:'#8A5A9A'},
+  moon:{O:'#6B5A80',G:'#E3D8EE',D:'#A99BC0'}
+};
+const roverPal=m=>Object.assign({O:'#10061A',W:'#E8E0D0',s:'#A8A292',P:'#2B4C9B',p:'#5B86F0',K:'#33334A',H:'#8A8AA8'},MOODS[m]);
+const roverArt=(mood,px)=>sprite(G.rover,roverPal(mood),px);
+const mascotArt=roverArt;
+const coinArt=px=>sprite(G.crystal,PAL.crystal,px);
+const starsHtml=(n,px)=>[0,1,2].map(i=>sprite(G.star,i<n?PAL.star:PAL.starOff,px)).join('');
+
+/* ---------- Interfaz ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function hl(t){
+  const re=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*")|\b(int|double|boolean|String|if|else|while|do|for|switch|case|default|break|return|true|false)\b|(\b\d+(?:\.\d+)?\b)/g;
+  let o='',last=0,m;
+  while((m=re.exec(t))){ o+=esc(t.slice(last,m.index)); const c=m[1]?'c':m[2]?'s':m[3]?'k':'n'; o+='<span class="t-'+c+'">'+esc(m[0])+'</span>'; last=re.lastIndex; }
+  return o+esc(t.slice(last));
+}
+const KEY='marte-quest-v1';
+function load(){ try{ const r=localStorage.getItem(KEY); if(r){ const o=JSON.parse(r); if(o&&o.done) return o; } }catch(e){} return {done:{},teacher:false,snd:false}; }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+let S=load(), cur=0, att={fails:0,hints:0,sol:false};
+const isDone=i=>!!S.done[i];
+const open_=i=>i===0||isDone(i-1)||S.teacher||isDone(i);
+const reduced=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function features(){ const F={}; FEATS.forEach(([k],i)=>{ F[k]=isDone(i); }); return F; }
+function totalStars(){ return Object.values(S.done).reduce((a,b)=>a+b,0); }
+
+/* Fondo: estrellas y ciudad */
+function seed(n){ let s=n; return ()=>(s=(s*1664525+1013904223)>>>0)/4294967296; }
+function paintBackdrop(){
+  const r=seed(7), sh=[];
+  for(let i=0;i<70;i++){ sh.push(Math.floor(r()*100)+'vw '+Math.floor(r()*72)+'vh 0 '+(r()>.8?'1px':'0')+' rgba(255,255,255,'+(.3+r()*.5).toFixed(2)+')'); }
+  $('stars').firstElementChild.style.boxShadow=sh.join(',');
+  const q=seed(21); let b='';
+  const layers=[['#5E2438',18,.045,.9],['#471B33',12,.07,2.1],['#2E1126',7,.1,3.7]];
+  layers.forEach(([col,base,fr,ph])=>{ for(let x=0;x<240;x+=2){ const h=Math.round(base+Math.sin(x*fr+ph)*5+Math.sin(x*fr*2.7+ph)*2); b+='<rect x="'+x+'" y="'+(40-h)+'" width="2" height="'+h+'" fill="'+col+'"/>'; } });
+  for(let i=0;i<9;i++){ const rx=Math.floor(q()*230)+4, ry=33+Math.floor(q()*4), rw=3+Math.floor(q()*4); b+='<rect x="'+rx+'" y="'+ry+'" width="'+rw+'" height="'+(40-ry)+'" fill="#1D0B1C"/><rect x="'+(rx+1)+'" y="'+(ry-1)+'" width="'+(rw-2)+'" height="1" fill="#1D0B1C"/>'; }
+  $('sky').innerHTML='<svg viewBox="0 0 240 40" preserveAspectRatio="xMidYMax slice" shape-rendering="crispEdges" aria-hidden="true">'+b+'</svg>';
+  const mo=document.createElement('div'); mo.style.cssText='position:absolute;right:7vw;top:10vh'; mo.innerHTML=sprite(G.moon,PAL.moon,5); $('stars').appendChild(mo);
+  $('logo').innerHTML=roverArt('neutral',4);
+  $('hud-coin').innerHTML=sprite(G.star,PAL.star,3);
+}
+
+/* Sonido (apagado por defecto) */
+let AC=null;
+function sfx(kind){
+  if(!S.snd) return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const seq={ok:[[523,0],[659,.09],[784,.18],[1047,.27]],bad:[[220,0],[165,.12]],tick:[[880,0]]}[kind];
+    seq.forEach(([f,t])=>{ const o=AC.createOscillator(), g=AC.createGain(), t0=AC.currentTime+t; o.type='square'; o.frequency.value=f; g.gain.setValueAtTime(.05,t0); g.gain.exponentialRampToValueAtTime(.001,t0+.12); o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0+.13); });
+  }catch(e){}
+}
+function renderSnd(){ const b=$('b-snd'); b.textContent='Sonido: '+(S.snd?'sí':'no'); b.setAttribute('aria-pressed',S.snd?'true':'false'); }
+
+/* Efectos */
+function burst(){
+  if(reduced()) return;
+  const fx=$('fx');
+  for(let i=0;i<14;i++){
+    const d=document.createElement('div'), a=Math.random()*Math.PI*2, dist=120+Math.random()*190;
+    d.className='cfx'; d.style.setProperty('--dx',Math.round(Math.cos(a)*dist)+'px'); d.style.setProperty('--dy',Math.round(Math.sin(a)*dist+130)+'px');
+    d.innerHTML=coinArt(3); fx.appendChild(d); setTimeout(()=>d.remove(),1250);
+  }
+}
+let bt=null;
+function banner(t){ const b=$('banner'); b.textContent=t; b.hidden=false; b.style.animation='none'; void b.offsetWidth; b.style.animation=''; clearTimeout(bt); bt=setTimeout(()=>{ b.hidden=true; },1900); }
+function setMood(m){ $('mascot').innerHTML=roverArt(m,6); }
+
+/* Pantallas */
+function renderMap(){
+  $('map').innerHTML=LEVELS.map((L,i)=>{
+    const d=isDone(i), lk=!open_(i);
+    const ico=lk?sprite(G.lock,PAL.lock,2):d?coinArt(2):'';
+    return '<button class="node '+(d?'done ':'')+(lk?'locked ':'')+(i===cur?'cur ':'')+(i===LEVELS.length-1?'boss':'')+'" data-i="'+i+'" '+(lk?'aria-disabled="true" ':'')+(i===cur?'aria-current="step" ':'')+'aria-label="Nivel '+i+': '+esc(L.short)+(d?', '+S.done[i]+' estrellas':'')+'">'
+      +'<span class="n-top"><span class="n-num">'+i+'</span><span class="n-ico">'+ico+'</span></span>'
+      +'<span class="n-name">'+esc(L.short)+'</span>'
+      +'<span class="n-stars">'+(lk?'':starsHtml(d?S.done[i]:0,2))+'</span></button>';
+  }).join('');
+  $('total').textContent=totalStars();
+  $('hud-bar').innerHTML=LEVELS.map((_,i)=>'<i class="'+(isDone(i)?'on':'')+'"></i>').join('');
+}
+function renderFeatures(){
+  const F=features();
+  $('feat').innerHTML=FEATS.map(([k,n])=>'<span class="'+(F[k]?'on':'')+'">'+n+'</span>').join('');
+  const L=LEVELS[cur];
+  $('try').textContent=isDone(cur)?'Para probar: '+L.tryIt:'Supera este nivel para activar esta función en el cajero.';
+}
+function renderLevel(){
+  const L=LEVELS[cur], done=isDone(cur);
+  $('m-level').textContent='NIVEL '+cur+' / '+(LEVELS.length-1);
+  $('m-tema').textContent=L.tema;
+  $('m-title').textContent=L.title.toUpperCase();
+  $('m-story').textContent=L.story;
+  $('m-concept').innerHTML='<b class="item">OBJETO: CONCEPTO</b>'+L.concept;
+  setMood(done?'happy':'neutral');
+  const parts=L.code.split(/\[\[(\d+)\]\]/);
+  let html='';
+  parts.forEach((p,k)=>{
+    if(k%2===0) html+=hl(p);
+    else { const i=+p-1, w=Math.max(...L.blanks[i].ok.map(a=>a.length))+2;
+      html+='<input class="blank" id="b'+cur+'-'+i+'" data-i="'+i+'" size="'+Math.max(w,3)+'" placeholder="'+p+'" spellcheck="false" autocomplete="off" autocapitalize="none" aria-label="Espacio '+p+'">'; }
+  });
+  $('code').innerHTML=html;
+  $('legend').innerHTML=L.blanks.map(b=>'<li>'+b.ask+'</li>').join('');
+  $('c-count').textContent=L.blanks.length+' espacios';
+  const fb=$('fb'); fb.className='fb'; fb.innerHTML='';
+  $('b-sol').hidden=true;
+  const inputs=[...document.querySelectorAll('input.blank')];
+  if(done){ inputs.forEach((inp,i)=>{ inp.value=L.blanks[i].ok[0]; inp.readOnly=true; inp.classList.add('is-ok'); }); }
+  $('b-check').disabled=done; $('b-hint').disabled=done;
+  $('done').hidden=!done;
+  if(done){ $('d-stars').innerHTML=starsHtml(S.done[cur],5); $('d-explain').innerHTML=L.explain; $('d-unlock').innerHTML='<b>Control de misión:</b> '+L.unlock; $('b-next').hidden=cur>=LEVELS.length-1; $('b-next').textContent='Ir al nivel '+(cur+1); }
+  renderFeatures(); renderFinale();
+}
+function renderFinale(){
+  const all=LEVELS.every((_,i)=>isDone(i));
+  $('finale').hidden=!all;
+  if(all){
+    const t=totalStars(); const rank=t>=24?'Comandante':t>=17?'Explorador':'Cadete';
+    $('f-rank').innerHTML='Rescataste el rover en los 9 niveles con <b>'+t+' de 27 estrellas</b>. Rango: <b>'+rank+'</b>.';
+    $('f-code').textContent=$('fullcode').textContent.trim();
+  }
+}
+function goLevel(i){ stopDemo(); cur=i; att={fails:0,hints:0,sol:false}; renderLevel(); renderMap(); resetSim('Nivel '+i+': '+LEVELS[i].title+'. Pulsa Ejecutar para ver al rover.'); }
+
+function showFb(cls,html){ const fb=$('fb'); fb.className='fb show '+cls; fb.innerHTML=html; }
+function verify(){
+  if(isDone(cur)) return;
+  const L=LEVELS[cur]; const inputs=[...document.querySelectorAll('input.blank')]; let ok=0;
+  inputs.forEach((inp,i)=>{ const good=isOk(L.blanks[i],inp.value); inp.classList.toggle('is-ok',good); inp.classList.toggle('is-bad',!good); if(good) ok++; });
+  if(ok===inputs.length){
+    const s=att.sol?1:(att.fails===0&&att.hints===0)?3:(att.fails<=2&&att.hints<=1)?2:1;
+    S.done[cur]=Math.max(S.done[cur]||0,s); save();
+    inputs.forEach(i=>{i.readOnly=true;});
+    renderLevel(); renderMap();
+    resetSim('Nivel '+cur+' superado. '+L.unlock+' Pulsa Ejecutar o Ver demo.');
+    const all=LEVELS.every((_,i)=>isDone(i));
+    banner(all?'¡MISIÓN CUMPLIDA!':'¡NIVEL SUPERADO!'); burst(); sfx('ok');
+    $('done').scrollIntoView({block:'nearest',behavior:reduced()?'auto':'smooth'});
+  } else {
+    att.fails++; setMood('worried'); sfx('bad');
+    showFb('bad',ok+' de '+inputs.length+' espacios correctos. Revisa los que están en rojo.');
+    if(att.fails>=3) $('b-sol').hidden=false;
+  }
+}
+function hint(){ const L=LEVELS[cur]; if(!att.hintShown){ att.hints++; att.hintShown=true; } sfx('tick'); showFb('hint','<b>Pista.</b> '+L.hint); }
+function solution(){
+  const L=LEVELS[cur]; att.sol=true;
+  document.querySelectorAll('input.blank').forEach((inp,i)=>{ inp.value=L.blanks[i].ok[0]; inp.classList.remove('is-bad'); });
+  showFb('hint','Se llenó la solución. Léela y pulsa <b>Verificar</b> para avanzar (este nivel dará 1 estrella).');
+}
+
+
+/* Mapa y telemetría */
+const cells={};
+function buildMap(){
+  let h='';
+  for(let r=9;r>=0;r--) for(let c=0;c<10;c++){
+    const s=(c+r)%3===0;
+    h+='<div class="cell'+((c+r)%2?' alt':'')+'" id="c'+c+'_'+r+'">'+(s?'<span class="gem">'+sprite(G.crystal,PAL.crystal,1)+'</span>':'')+'</div>';
+  }
+  $('mgrid').innerHTML=h;
+  $('rover').innerHTML=roverArt('neutral',2);
+  $('bbar').innerHTML='<i></i>'.repeat(10);
+}
+let lastGot=null;
+function onState(s){
+  const rv=$('rover'); rv.style.left=(s.x*10)+'%'; rv.style.top=((9-s.y)*10)+'%';
+  $('marsmap').classList.toggle('storm',!!s.torm); $('t-storm').hidden=!s.torm;
+  const seg=Math.ceil(s.bat/10), bb=$('bbar');
+  [...bb.children].forEach((e,i)=>e.classList.toggle('on',i<seg));
+  bb.className='bbar'+(s.bat<20?' low':s.bat<50?' mid':'');
+  $('bpct').textContent=s.bat+'%';
+  $('t-pos').textContent=s.x+','+s.y; $('t-mue').textContent=s.mue; $('t-mov').textContent=s.mov; $('t-rec').textContent=s.rec+'/3';
+  if(lastGot){ lastGot.classList.remove('got'); lastGot=null; }
+  if(s.ultX>=0){ const c=document.getElementById('c'+s.ultX+'_'+s.ultY); if(c){ c.classList.add('got'); lastGot=c; } }
+}
+
+/* Terminal */
+let gen=null, waiting=false, demoQ=[], demoTimer=null;
+const scr=$('screen'), inp=$('sim-in'), sendB=$('sim-send');
+function out(t,cls){ const d=document.createElement('div'); d.className='l '+(cls||''); d.textContent=t; scr.appendChild(d); scr.scrollTop=scr.scrollHeight; }
+function setRun(on){ $('slot').classList.toggle('run',on); }
+function endSim(){ waiting=false; gen=null; inp.disabled=true; sendB.disabled=true; inp.value=''; $('sim-label').textContent='Fin'; setRun(false); }
+function advance(val){
+  try{
+    const r=gen.next(val);
+    if(r.done){ out('— Programa finalizado —','note'); endSim(); return; }
+    waiting=true; $('sim-label').textContent=r.value.ask.trim(); inp.disabled=false; sendB.disabled=false; inp.value='';
+    if(!demoQ.length) inp.focus({preventScroll:true});
+    scheduleDemo();
+  }catch(e){
+    if(e instanceof InputErr){ out('Exception in thread "main" java.util.InputMismatchException: For input string: "'+e.text+'"','err'); out('El programa se detuvo: escribe solo números enteros.','note'); endSim(); }
+    else throw e;
+  }
+}
+function startSim(){ stopDemo(); sfx('tick'); scr.innerHTML=''; gen=atm(features(),out,onState); setRun(true); advance(undefined); }
+function submit(){ if(!waiting) return; const v=inp.value; out($('sim-label').textContent+' '+v,'in'); waiting=false; inp.disabled=true; sendB.disabled=true; advance(v); }
+function resetSim(msg){ stopDemo(); onState({x:0,y:0,bat:100,mov:0,mue:0,rec:0,torm:false,ultX:-1,ultY:-1}); gen=null; waiting=false; scr.innerHTML=''; if(msg) out(msg,'note'); inp.disabled=true; sendB.disabled=true; inp.value=''; $('sim-label').textContent='Entrada'; setRun(false); }
+function scheduleDemo(){ if(!demoQ.length||!waiting) return; clearTimeout(demoTimer); demoTimer=setTimeout(()=>{ if(!waiting||!demoQ.length) return; inp.value=demoQ.shift(); setTimeout(submit,320); },520); }
+function stopDemo(){ demoQ=[]; clearTimeout(demoTimer); }
+function runDemo(){ const q=LEVELS[cur].demo.slice(); stopDemo(); sfx('tick'); scr.innerHTML=''; gen=atm(features(),out,onState); setRun(true); demoQ=q; advance(undefined); }
+
+/* Eventos */
+$('map').addEventListener('click',e=>{ const b=e.target.closest('.node'); if(!b) return; const i=+b.dataset.i; if(open_(i)){ sfx('tick'); goLevel(i); } });
+$('b-check').addEventListener('click',verify);
+$('b-hint').addEventListener('click',hint);
+$('b-sol').addEventListener('click',solution);
+$('b-next').addEventListener('click',()=>goLevel(Math.min(cur+1,LEVELS.length-1)));
+$('code').addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.classList.contains('blank')){ e.preventDefault(); verify(); } });
+$('code').addEventListener('input',e=>{ if(e.target.classList.contains('blank')){ e.target.classList.remove('is-bad','is-ok'); if(!isDone(cur)) setMood('neutral'); } });
+$('b-run').addEventListener('click',startSim);
+$('b-demo').addEventListener('click',runDemo);
+$('inform').addEventListener('submit',e=>{ e.preventDefault(); stopDemo(); submit(); });
+$('b-snd').addEventListener('click',()=>{ S.snd=!S.snd; save(); renderSnd(); sfx('tick'); });
+$('b-copy').addEventListener('click',()=>{
+  const t=$('fullcode').textContent.trim(), b=$('b-copy');
+  const fallback=()=>{ const d=$('finale').querySelector('details'); d.open=true; const r=document.createRange(); r.selectNodeContents($('f-code')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent='Selecciona: Ctrl+C'; };
+  try{ navigator.clipboard.writeText(t).then(()=>{ b.textContent='¡Copiado!'; setTimeout(()=>b.textContent='Copiar código',1800); },fallback); }catch(e){ fallback(); }
+});
+$('b-teacher').addEventListener('click',()=>{ S.teacher=!S.teacher; save(); $('b-teacher').textContent=S.teacher?'Modo docente activo: volver al orden normal':'Modo docente: abrir todos los niveles'; renderMap(); });
+let rt=null;
+$('b-reset').addEventListener('click',()=>{
+  const b=$('b-reset');
+  if(!rt){ b.textContent='¿Seguro? Pulsa otra vez para borrar el avance'; rt=setTimeout(()=>{ rt=null; b.textContent='Reiniciar progreso'; },3500); return; }
+  clearTimeout(rt); rt=null; b.textContent='Reiniciar progreso'; S={done:{},teacher:false,snd:S.snd}; save(); $('b-teacher').textContent='Modo docente: abrir todos los niveles'; goLevel(0);
+});
+
+/* Inicio */
+(function start(){
+  paintBackdrop(); buildMap(); renderSnd();
+  let first=0; while(first<LEVELS.length-1 && isDone(first)) first++;
+  if(S.teacher) $('b-teacher').textContent='Modo docente activo: volver al orden normal';
+  goLevel(first);
+})();
+</script>
+
+</body>
+</html>
